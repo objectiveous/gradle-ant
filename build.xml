@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project name="example" default="smoke">
+
+	<target name="smoke" depends="clean-it,compile">
+		<echo>I'm in your builds! </echo>
+
+		<junit printsummary="yes">
+			<classpath refid="classpath.test" />
+			<test name="org.example.SimpleTest">
+				<formatter type="xml" />
+			</test>
+		</junit>
+	</target>
+
+
+	<path id="classpath.build">
+		<fileset dir="lib">
+			<include name="**/*.jar" />
+		</fileset>
+	</path>
+
+	<path id="classpath.test">
+	    <pathelement location="build/classes/" />
+		<fileset dir="lib">
+			<include name="**/*.jar" />
+		</fileset>
+	</path>
+
+
+	<target name="clean-it">
+		<delete dir="build" />
+	</target>
+
+	<target name="compile">
+		<mkdir dir="build/classes" />
+
+		<javac srcdir="src" destdir="build/classes"  includeantruntime="false" fork="yes">
+			<classpath refid="classpath.build" />
+		</javac>
+	</target>
+</project>

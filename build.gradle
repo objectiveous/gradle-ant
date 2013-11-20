@@ -1,0 +1,21 @@
+apply plugin: 'java'
+apply plugin: 'eclipse'
+
+group = 'example'
+
+defaultTasks = ['smoke']
+
+repositories{ mavenCentral() }
+configurations { antClasspath }
+
+dependencies { antClasspath 'org.apache.ant:ant-junit4:1.9.2' }
+
+ant.importBuild 'build.xml'
+
+
+ClassLoader antClassLoader = org.apache.tools.ant.Project.class.classLoader
+configurations.antClasspath.each { File f ->
+	println('[***********]' + f.toURI().toURL())
+	antClassLoader.addURL(f.toURI().toURL())
+}
+
