@@ -7,6 +7,7 @@
 		<junit printsummary="yes">
 			<classpath refid="classpath.test" />
 			<test name="org.example.SimpleTest">
+				<formatter type="xml" />
 			</test>
 		</junit>
 	</target>

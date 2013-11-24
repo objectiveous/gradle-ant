@@ -8,7 +8,14 @@ defaultTasks = ['smoke']
 repositories{ mavenCentral() }
 configurations { antClasspath }
 
-dependencies { antClasspath 'org.apache.ant:ant-junit4:1.9.2' }
+dependencies {
+	//antClasspath 'org.apache.ant:ant-junit4:1.9.2'
+
+	antClasspath 'junit:junit:4.8.2'
+	antClasspath('org.apache.ant:ant-junit:1.9.2') {  transitive = false }
+	antClasspath('org.apache.ant:ant-junit4:1.9.2') { transitive = false }
+
+}
 
 ant.importBuild 'build.xml'
 
@@ -18,8 +25,8 @@ configurations.antClasspath.each { File f ->
 	antClassLoader.addURL(f.toURI().toURL())
 }
 
+ant.taskdef(name: 'junit', classname: 'org.apache.tools.ant.taskdefs.optional.junit.JUnitTask',
+classpath: configurations.antClasspath.asPath)
 
-task wrapper(type: Wrapper) {
-	gradleVersion = '1.9-rc-3'
-}
+task wrapper(type: Wrapper) { gradleVersion = '1.9-rc-3' }
 
