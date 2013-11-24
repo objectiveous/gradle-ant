@@ -5,15 +5,20 @@ group = 'example'
 
 defaultTasks = ['smoke']
 
-repositories{ mavenCentral() }
-configurations { antClasspath }
+repositories {
+    mavenCentral()
+}
+
+configurations {
+    antClasspath
+}
 
 dependencies {
-	//antClasspath 'org.apache.ant:ant-junit4:1.9.2'
+    //antClasspath 'org.apache.ant:ant-junit4:1.9.2'
 
-	antClasspath 'junit:junit:4.8.2'
-	antClasspath('org.apache.ant:ant-junit:1.9.2') {  transitive = false }
-	antClasspath('org.apache.ant:ant-junit4:1.9.2') { transitive = false }
+    antClasspath 'junit:junit:4.8.2'
+    antClasspath('org.apache.ant:ant-junit:1.9.2') { transitive = false }
+    antClasspath('org.apache.ant:ant-junit4:1.9.2') { transitive = false }
 
 }
 
@@ -22,25 +27,45 @@ ant.importBuild 'build.xml'
 
 ClassLoader antClassLoader = org.apache.tools.ant.Project.class.classLoader
 configurations.antClasspath.each { File f ->
-	antClassLoader.addURL(f.toURI().toURL())
+    antClassLoader.addURL(f.toURI().toURL())
 }
 
 ant.taskdef(name: 'junit', classname: 'org.apache.tools.ant.taskdefs.optional.junit.JUnitTask',
-classpath: configurations.antClasspath.asPath)
+        classpath: configurations.antClasspath.asPath)
 
-task wrapper(type: Wrapper) {  gradleVersion = '1.9-rc-3'  }
+task wrapper(type: Wrapper) {
+    gradleVersion = '1.9'
+}
 
 
 task callHome(type: CallHome)
 
+/**
+ PLUGIN
+
+ This is not a pluin yet but it should be. The idea is to have all build events collecting
+ metrics about the build event and publishing them to mongodb or splunk... or whatever. For
+ now we are running a local instance of mongo because its easy.
+
+ Ideally, this code will evolve into a plugin that can be loaded at runtime from a remote source.
+ While loading it from a repo would be nice, pulling it straight from a git repo is an option.
+
+ Also, we need to unit test this code and that will likely have an effect which representation (groovy vs. Java)
+ that we choose.
+
+ Data to collect
+  - All properties used when invoking ant. We can use this data to understand how to configure
+   the various class paths in gradle.
+
+ **/
 
 // This adds the mongo drivers to the build, not the application itself
 buildscript {
-	repositories { mavenCentral() }
-	dependencies {
-		classpath group: 'org.mongodb', name: 'mongo-java-driver', version: '2.11.3'
-		classpath group: 'joda-time', name: 'joda-time', version: '2.3'
-	}
+    repositories { mavenCentral() }
+    dependencies {
+        classpath group: 'org.mongodb', name: 'mongo-java-driver', version: '2.11.3'
+        classpath group: 'joda-time', name: 'joda-time', version: '2.3'
+    }
 }
 
 import com.mongodb.MongoClient;
@@ -52,38 +77,34 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
 import com.mongodb.DBCursor;
 import com.mongodb.ServerAddress;
-import java.text.SimpleDateFormat;
 import org.joda.time.DateTime;
 
 import java.util.Arrays;
 class CallHome extends DefaultTask {
-	@TaskAction
-	def register() {
-		println 'hello from call home'
+    public static String MONGO_HOST = "localhost"
+    public static String MONGO_DB_NAME = "build"
+    // The primary collection of build event documents stored in mongo
+    public static String MONGO_COLLECTION = "build-events"
 
-		MongoClient mongoClient = new MongoClient( "localhost" );
 
+    @TaskAction
+    def register() {
+        println 'hello from call home'
 
-		DB db = mongoClient.getDB( "build" );
+        MongoClient mongoClient = new MongoClient(MONGO_HOST);
+        DB db = mongoClient.getDB(MONGO_DB_NAME);
+        DBCollection coll = db.getCollection(MONGO_COLLECTION);
 
-		DBCollection coll = db.getCollection("build-events");
+        BasicDBObject doc = new BasicDBObject("time", createATimeStamp()).
+                append("hostname", java.net.InetAddress.getLocalHost().getHostName()).
+                append("user", System.getProperty("user.name"));
 
-		BasicDBObject doc = new BasicDBObject("time", stampJoda()).
-				append("hostname", java.net.InetAddress.getLocalHost().getHostName()).
-				append("user", System.getProperty("user.name"));
+        coll.insert(doc);
+    }
 
-		coll.insert(doc);
-	}
-	// TODO Dates shoudl be returned in UTC time and the format 
-	def String stampTheTime(){
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-mm-dd h:mm:ss a");
-		return  sdf.format(new Date());
-		
-	}
-	
-	def String stampJoda(){
-		
-		DateTime dateTime = new DateTime();
-		dateTime.toString("MM-dd-yyyy HH:mm Z");
-	}
+    def String createATimeStamp() {
+
+        DateTime dateTime = new DateTime();
+        dateTime.toString("MM-dd-yyyy HH:mm Z");
+    }
 }
