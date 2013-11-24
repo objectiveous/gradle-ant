@@ -28,5 +28,62 @@ configurations.antClasspath.each { File f ->
 ant.taskdef(name: 'junit', classname: 'org.apache.tools.ant.taskdefs.optional.junit.JUnitTask',
 classpath: configurations.antClasspath.asPath)
 
-task wrapper(type: Wrapper) { gradleVersion = '1.9-rc-3' }
+task wrapper(type: Wrapper) {  gradleVersion = '1.9-rc-3'  }
 
+
+task callHome(type: CallHome)
+
+
+// This adds the mongo drivers to the build, not the application itself
+buildscript {
+	repositories { mavenCentral() }
+	dependencies {
+		classpath group: 'org.mongodb', name: 'mongo-java-driver', version: '2.11.3'
+		classpath group: 'joda-time', name: 'joda-time', version: '2.3'
+	}
+}
+
+import com.mongodb.MongoClient;
+import com.mongodb.MongoException;
+import com.mongodb.WriteConcern;
+import com.mongodb.DB;
+import com.mongodb.DBCollection;
+import com.mongodb.BasicDBObject;
+import com.mongodb.DBObject;
+import com.mongodb.DBCursor;
+import com.mongodb.ServerAddress;
+import java.text.SimpleDateFormat;
+import org.joda.time.DateTime;
+
+import java.util.Arrays;
+class CallHome extends DefaultTask {
+	@TaskAction
+	def register() {
+		println 'hello from call home'
+
+		MongoClient mongoClient = new MongoClient( "localhost" );
+
+
+		DB db = mongoClient.getDB( "build" );
+
+		DBCollection coll = db.getCollection("build-events");
+
+		BasicDBObject doc = new BasicDBObject("time", stampJoda()).
+				append("hostname", java.net.InetAddress.getLocalHost().getHostName()).
+				append("user", System.getProperty("user.name"));
+
+		coll.insert(doc);
+	}
+	// TODO Dates shoudl be returned in UTC time and the format 
+	def String stampTheTime(){
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-mm-dd h:mm:ss a");
+		return  sdf.format(new Date());
+		
+	}
+	
+	def String stampJoda(){
+		
+		DateTime dateTime = new DateTime();
+		dateTime.toString("MM-dd-yyyy HH:mm Z");
+	}
+}
